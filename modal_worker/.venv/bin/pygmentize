@@ -1,0 +1,6 @@
+#!/Users/atharvakudtarkar/Downloads/ai-video-studio-modal-wan-v1/modal_worker/.venv/bin/python3.11
+import sys
+from pygments.cmdline import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
