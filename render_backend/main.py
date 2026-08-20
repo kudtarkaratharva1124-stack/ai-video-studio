@@ -135,12 +135,6 @@ def generate(req: Req):
 @app.get("/jobs/{job_id}")
 def job(job_id: str):
 
-    if job_id not in JOBS:
-        raise HTTPException(
-            status_code=404,
-            detail="Job not found",
-        )
-
     if not MODAL_JOBS_URL:
         raise HTTPException(
             status_code=503,
@@ -148,45 +142,41 @@ def job(job_id: str):
         )
 
     try:
-
         response = requests.get(
             MODAL_JOBS_URL,
-            params={
-                "job_id": job_id,
-            },
+            params={"job_id": job_id},
             timeout=20,
         )
+
+        if response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail="Job not found in Modal.",
+            )
 
         response.raise_for_status()
 
         modal_data = response.json()
 
-        JOBS[job_id].update(
-            {
-                "status": modal_data.get(
-                    "status",
-                    JOBS[job_id].get("status"),
-                ),
-                "message": modal_data.get(
-                    "message",
-                    JOBS[job_id].get("message"),
-                ),
-            }
-        )
+        result = {
+            "id": job_id,
+            "status": modal_data.get("status", "unknown"),
+            "message": modal_data.get("message", ""),
+        }
 
-        # When Modal finishes, expose the Render video URL.
         if modal_data.get("status") == "completed":
-            JOBS[job_id]["video_url"] = f"/video/{job_id}"
+            result["video_url"] = f"/video/{job_id}"
 
-        return JOBS[job_id]
+        return result
+
+    except HTTPException:
+        raise
 
     except Exception as e:
-
-        JOBS[job_id]["message"] = (
-            f"Status check failed: {e}"
+        raise HTTPException(
+            status_code=502,
+            detail=f"Modal status request failed: {e}",
         )
-
-        return JOBS[job_id]
 
 
 # ---------------------------------------------------------
